@@ -15,7 +15,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { username, password } = registerSchema.parse(body);
 
-    const client = await clientPromise;
+    // Check MongoDB connection
+    if (!process.env.MONGODB_URI) {
+      console.error('MONGODB_URI is not set');
+      return NextResponse.json(
+        { error: 'Database configuratie ontbreekt. Controleer je .env bestand.' },
+        { status: 500 }
+      );
+    }
+
+    let client;
+    try {
+      client = await clientPromise;
+    } catch (connectionError) {
+      console.error('MongoDB connection error:', connectionError);
+      return NextResponse.json(
+        { error: 'Kan niet verbinden met database. Controleer je MongoDB instellingen.' },
+        { status: 500 }
+      );
+    }
+    
     const db = client.db();
     const usersCollection = db.collection('users');
 
@@ -50,6 +69,21 @@ export async function POST(request: NextRequest) {
       );
     }
     console.error('Error registering user:', error);
+    
+    // Provide more specific error messages
+    if (error instanceof Error) {
+      if (error.message.includes('Mongo') || error.message.includes('connection')) {
+        return NextResponse.json(
+          { error: 'Database verbinding mislukt. Controleer je MongoDB instellingen.' },
+          { status: 500 }
+        );
+      }
+      return NextResponse.json(
+        { error: `Fout bij het aanmaken van account: ${error.message}` },
+        { status: 500 }
+      );
+    }
+    
     return NextResponse.json(
       { error: 'Fout bij het aanmaken van account' },
       { status: 500 }

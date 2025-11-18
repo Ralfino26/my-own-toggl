@@ -28,6 +28,7 @@ export default function RegisterPage() {
 
       if (!response.ok) {
         setError(data.error || 'Er is een fout opgetreden');
+        console.error('Registration error:', data);
         return;
       }
 
