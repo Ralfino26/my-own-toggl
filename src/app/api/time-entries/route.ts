@@ -1,26 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { auth } from '@/auth';
+import clientPromise from '@/lib/mongodb';
 import { TimeEntry } from '@/types';
+import { ObjectId } from 'mongodb';
+
+export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const projectId = searchParams.get('projectId');
 
-    const db = getDb();
-    let entries: TimeEntry[];
+    const client = await clientPromise;
+    const db = client.db();
+    const timeEntriesCollection = db.collection('time_entries');
+    const projectsCollection = db.collection('projects');
 
+    let query: any = { userId: session.user.id };
     if (projectId) {
-      entries = db
-        .prepare('SELECT * FROM time_entries WHERE projectId = ? ORDER BY date DESC, createdAt DESC')
-        .all(projectId) as TimeEntry[];
-    } else {
-      entries = db
-        .prepare('SELECT * FROM time_entries ORDER BY date DESC, createdAt DESC')
-        .all() as TimeEntry[];
+      // Verify project belongs to user
+      const project = await projectsCollection.findOne({
+        _id: new ObjectId(projectId),
+        userId: session.user.id,
+      });
+      if (!project) {
+        return NextResponse.json({ error: 'Project not found' }, { status: 404 });
+      }
+      query.projectId = projectId;
     }
 
-    return NextResponse.json(entries);
+    const entries = await timeEntriesCollection
+      .find(query)
+      .sort({ date: -1, createdAt: -1 })
+      .toArray();
+
+    const formattedEntries: TimeEntry[] = entries.map((e) => ({
+      id: e._id.toString(),
+      projectId: e.projectId,
+      date: e.date,
+      hours: e.hours,
+      description: e.description,
+      createdAt: e.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json(formattedEntries);
   } catch (error) {
     console.error('Error fetching time entries:', error);
     return NextResponse.json({ error: 'Failed to fetch time entries' }, { status: 500 });
@@ -29,6 +57,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { projectId, date, hours, description } = body;
 
@@ -44,26 +77,38 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Hours must be a positive number' }, { status: 400 });
     }
 
-    const db = getDb();
-    
-    // Verify project exists
-    const project = db.prepare('SELECT id FROM projects WHERE id = ?').get(projectId);
+    const client = await clientPromise;
+    const db = client.db();
+    const projectsCollection = db.collection('projects');
+    const timeEntriesCollection = db.collection('time_entries');
+
+    // Verify project exists and belongs to user
+    const project = await projectsCollection.findOne({
+      _id: new ObjectId(projectId),
+      userId: session.user.id,
+    });
+
     if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
 
+    const result = await timeEntriesCollection.insertOne({
+      userId: session.user.id,
+      projectId,
+      date,
+      hours: hoursNum,
+      description: description?.trim() || null,
+      createdAt: new Date(),
+    });
+
     const entry: TimeEntry = {
-      id: crypto.randomUUID(),
+      id: result.insertedId.toString(),
       projectId,
       date,
       hours: hoursNum,
       description: description?.trim() || undefined,
       createdAt: new Date().toISOString(),
     };
-
-    db.prepare(
-      'INSERT INTO time_entries (id, projectId, date, hours, description, createdAt) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(entry.id, entry.projectId, entry.date, entry.hours, entry.description || null, entry.createdAt);
 
     return NextResponse.json(entry, { status: 201 });
   } catch (error) {
@@ -74,6 +119,11 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -81,12 +131,21 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Time entry ID is required' }, { status: 400 });
     }
 
-    const db = getDb();
-    const result = db.prepare('DELETE FROM time_entries WHERE id = ?').run(id);
+    const client = await clientPromise;
+    const db = client.db();
+    const timeEntriesCollection = db.collection('time_entries');
 
-    if (result.changes === 0) {
+    // Verify entry belongs to user
+    const entry = await timeEntriesCollection.findOne({
+      _id: new ObjectId(id),
+      userId: session.user.id,
+    });
+
+    if (!entry) {
       return NextResponse.json({ error: 'Time entry not found' }, { status: 404 });
     }
+
+    await timeEntriesCollection.deleteOne({ _id: new ObjectId(id) });
 
     return NextResponse.json({ success: true });
   } catch (error) {

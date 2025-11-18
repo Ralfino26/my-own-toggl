@@ -5,8 +5,10 @@ import { Project, TimeEntry } from '@/types';
 import { api } from '@/lib/api';
 import Link from 'next/link';
 import { jsPDF } from 'jspdf';
+import { signOut, useSession } from 'next-auth/react';
 
 export default function ProjectList() {
+  const { data: session } = useSession();
   const [projects, setProjects] = useState<Project[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -222,9 +224,16 @@ export default function ProjectList() {
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-10 gap-4">
-        <h1 className="text-4xl sm:text-5xl font-bold text-white">
-          The Agency Uren
-        </h1>
+        <div>
+          <h1 className="text-4xl sm:text-5xl font-bold text-white">
+            The Agency Uren
+          </h1>
+          {session?.user && (
+            <p className="text-white/60 text-sm mt-2">
+              Welkom, {session.user.username}
+            </p>
+          )}
+        </div>
         <div className="flex gap-3 w-full sm:w-auto">
           {projects.length > 0 && (
             <button
@@ -241,6 +250,15 @@ export default function ProjectList() {
           >
             {showAddForm ? 'Annuleren' : '+ Nieuw Project'}
           </button>
+          {session && (
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="px-6 py-3 text-base font-semibold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all backdrop-blur-sm"
+              title="Uitloggen"
+            >
+              Uitloggen
+            </button>
+          )}
         </div>
       </div>
 

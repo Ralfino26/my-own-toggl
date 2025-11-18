@@ -1,12 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { auth } from '@/auth';
+import clientPromise from '@/lib/mongodb';
 import { Project } from '@/types';
+import { ObjectId } from 'mongodb';
+
+export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const db = getDb();
-    const projects = db.prepare('SELECT * FROM projects ORDER BY createdAt DESC').all() as Project[];
-    return NextResponse.json(projects);
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const client = await clientPromise;
+    const db = client.db();
+    const projectsCollection = db.collection('projects');
+
+    const projects = await projectsCollection
+      .find({ userId: session.user.id })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    const formattedProjects: Project[] = projects.map((p) => ({
+      id: p._id.toString(),
+      name: p.name,
+      createdAt: p.createdAt.toISOString(),
+    }));
+
+    return NextResponse.json(formattedProjects);
   } catch (error) {
     console.error('Error fetching projects:', error);
     return NextResponse.json({ error: 'Failed to fetch projects' }, { status: 500 });
@@ -15,6 +37,11 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { name } = body;
 
@@ -22,18 +49,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Project name is required' }, { status: 400 });
     }
 
-    const db = getDb();
+    const client = await clientPromise;
+    const db = client.db();
+    const projectsCollection = db.collection('projects');
+
+    const result = await projectsCollection.insertOne({
+      userId: session.user.id,
+      name: name.trim(),
+      createdAt: new Date(),
+    });
+
     const project: Project = {
-      id: crypto.randomUUID(),
+      id: result.insertedId.toString(),
       name: name.trim(),
       createdAt: new Date().toISOString(),
     };
-
-    db.prepare('INSERT INTO projects (id, name, createdAt) VALUES (?, ?, ?)').run(
-      project.id,
-      project.name,
-      project.createdAt
-    );
 
     return NextResponse.json(project, { status: 201 });
   } catch (error) {
@@ -44,6 +74,11 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -51,12 +86,26 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Project ID is required' }, { status: 400 });
     }
 
-    const db = getDb();
-    const result = db.prepare('DELETE FROM projects WHERE id = ?').run(id);
+    const client = await clientPromise;
+    const db = client.db();
+    const projectsCollection = db.collection('projects');
+    const timeEntriesCollection = db.collection('time_entries');
 
-    if (result.changes === 0) {
+    // Verify project belongs to user
+    const project = await projectsCollection.findOne({
+      _id: new ObjectId(id),
+      userId: session.user.id,
+    });
+
+    if (!project) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 });
     }
+
+    // Delete project and all its time entries
+    await Promise.all([
+      projectsCollection.deleteOne({ _id: new ObjectId(id) }),
+      timeEntriesCollection.deleteMany({ projectId: id }),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {
