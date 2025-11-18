@@ -4,13 +4,17 @@ Een eenvoudige tijdregistratie applicatie voor projectbeheer. Maak projecten aan
 
 ## Installatie
 
-1. Installeer dependencies:
+1. Installeer dependencies (gebruik npm of bun):
 ```bash
+npm install
+# of
 bun install
 ```
 
 2. Start de development server:
 ```bash
+npm run dev
+# of
 bun dev
 ```
 
