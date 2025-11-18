@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import TimeEntryForm from '@/components/TimeEntryForm';
 import TimeEntryList from '@/components/TimeEntryList';
 import Link from 'next/link';
+import { SparklesCore } from '@/components/ui/sparkles';
 
 export default function ProjectPage() {
   const params = useParams();
@@ -50,37 +51,59 @@ export default function ProjectPage() {
 
   if (loading || !project) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-black dark:via-gray-950 dark:to-black flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-gray-300 border-t-[#007AFF] mb-4"></div>
-          <p className="text-gray-500 dark:text-gray-400 text-lg">Project laden...</p>
+      <div className="min-h-screen relative bg-black overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 z-0">
+          <SparklesCore
+            id="tsparticlesloading"
+            background="transparent"
+            minSize={0.6}
+            maxSize={1.4}
+            particleDensity={100}
+            className="w-full h-full"
+            particleColor="#FFFFFF"
+          />
+        </div>
+        <div className="relative z-10 text-center">
+          <div className="inline-block animate-spin rounded-full h-10 w-10 border-4 border-white/20 border-t-white mb-4"></div>
+          <p className="text-white/70 text-lg">Project laden...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-black dark:via-gray-950 dark:to-black">
-      <main className="container mx-auto px-4 py-8 sm:px-6 lg:px-8 max-w-5xl">
+    <div className="min-h-screen relative bg-black overflow-hidden">
+      <div className="absolute inset-0 z-0">
+        <SparklesCore
+          id="tsparticlesproject"
+          background="transparent"
+          minSize={0.6}
+          maxSize={1.4}
+          particleDensity={100}
+          className="w-full h-full"
+          particleColor="#FFFFFF"
+        />
+      </div>
+      <main className="relative z-10 container mx-auto px-4 py-8 sm:px-6 lg:px-8 max-w-5xl">
         <div className="mb-8">
           <Link
             href="/"
-            className="inline-flex items-center text-[#007AFF] hover:text-[#0051D5] font-semibold mb-6 transition-colors group"
+            className="inline-flex items-center text-white hover:text-white/80 font-semibold mb-6 transition-colors group"
           >
             <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span>
             Terug naar projecten
           </Link>
-          <div className="glass-card p-6 rounded-2xl mb-6">
+          <div className="p-6 rounded-2xl mb-6 backdrop-blur-xl bg-white/10 border border-white/20">
             <div className="flex items-center justify-between flex-wrap gap-4">
               <div>
-                <h1 className="text-4xl sm:text-5xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent mb-2">
+                <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2">
                   {project.name}
                 </h1>
                 <div className="flex items-baseline gap-2 mt-3">
-                  <p className="text-lg text-gray-600 dark:text-gray-400 font-medium">
+                  <p className="text-lg text-white/70 font-medium">
                     Totaal:
                   </p>
-                  <p className="text-2xl font-bold text-[#007AFF]">
+                  <p className="text-2xl font-bold text-white">
                     {totalHours.toFixed(2)}h
                   </p>
                 </div>
@@ -92,11 +115,11 @@ export default function ProjectPage() {
         <TimeEntryForm projectId={projectId} onEntryAdded={loadData} />
 
         <div className="mt-10">
-          <h2 className="text-2xl font-bold mb-6 text-gray-900 dark:text-white">Geregistreerde uren</h2>
+          <h2 className="text-2xl font-bold mb-6 text-white">Geregistreerde uren</h2>
           {loading ? (
             <div className="text-center py-12">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-[#007AFF] mb-4"></div>
-              <p className="text-gray-500 dark:text-gray-400">Laden...</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-white/20 border-t-white mb-4"></div>
+              <p className="text-white/70">Laden...</p>
             </div>
           ) : (
             <TimeEntryList entries={entries} onEntryDeleted={loadData} />

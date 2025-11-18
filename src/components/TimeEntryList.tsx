@@ -25,16 +25,15 @@ export default function TimeEntryList({ entries, onEntryDeleted }: TimeEntryList
     const date = new Date(dateString);
     return date.toLocaleDateString('nl-NL', {
       day: 'numeric',
-      month: 'long',
+      month: 'short',
       year: 'numeric',
     });
   };
 
   if (entries.length === 0) {
     return (
-      <div className="text-center py-12 glass-card rounded-2xl">
-        <div className="text-5xl mb-3">⏱️</div>
-        <p className="text-gray-500 dark:text-gray-400 font-medium">Nog geen uren geregistreerd voor dit project.</p>
+      <div className="text-center py-8 rounded-xl backdrop-blur-xl bg-white/10 border border-white/20">
+        <p className="text-white/70 text-sm">Nog geen uren geregistreerd.</p>
       </div>
     );
   }
@@ -43,38 +42,50 @@ export default function TimeEntryList({ entries, onEntryDeleted }: TimeEntryList
   const sortedEntries = [...entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   return (
-    <div className="space-y-3">
-      {sortedEntries.map((entry) => (
-        <div
-          key={entry.id}
-          className="glass-card p-5 rounded-2xl flex items-center justify-between hover:scale-[1.01] transition-all duration-200 group"
-        >
-          <div className="flex-1">
-            <div className="flex items-center gap-5">
-              <div className="flex-shrink-0 w-16 h-16 rounded-xl bg-gradient-to-br from-[#007AFF] to-[#0051D5] flex items-center justify-center shadow-lg">
-                <span className="text-lg font-bold text-white">
+    <div className="rounded-xl backdrop-blur-xl bg-white/10 border border-white/20 overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-white/10">
+            <th className="text-left py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider">Uren</th>
+            <th className="text-left py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider">Datum</th>
+            <th className="text-left py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider">Beschrijving</th>
+            <th className="text-right py-3 px-4 text-xs font-semibold text-white/70 uppercase tracking-wider w-12"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {sortedEntries.map((entry) => (
+            <tr
+              key={entry.id}
+              className="border-b border-white/5 hover:bg-white/5 transition-colors group last:border-b-0"
+            >
+              <td className="py-3 px-4">
+                <span className="text-sm font-semibold text-white/90">
                   {entry.hours.toFixed(1)}h
                 </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-base font-semibold text-gray-900 dark:text-white mb-1">
+              </td>
+              <td className="py-3 px-4">
+                <span className="text-sm text-white/80">
                   {formatDate(entry.date)}
-                </p>
-                {entry.description && (
-                  <p className="text-sm text-gray-500 dark:text-gray-400 truncate">{entry.description}</p>
-                )}
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={() => handleDelete(entry.id)}
-            className="text-red-500 hover:text-red-600 text-2xl font-light opacity-60 hover:opacity-100 transition-opacity w-10 h-10 flex items-center justify-center rounded-full hover:bg-red-50 dark:hover:bg-red-900/20 flex-shrink-0"
-            title="Verwijder entry"
-          >
-            ×
-          </button>
-        </div>
-      ))}
+                </span>
+              </td>
+              <td className="py-3 px-4">
+                <span className="text-sm text-white/70">
+                  {entry.description || <span className="text-white/40 italic">—</span>}
+                </span>
+              </td>
+              <td className="py-3 px-4 text-right">
+                <button
+                  onClick={() => handleDelete(entry.id)}
+                  className="text-red-400 hover:text-red-300 text-lg font-light opacity-0 group-hover:opacity-100 transition-opacity w-6 h-6 flex items-center justify-center rounded hover:bg-red-500/20 ml-auto"
+                  title="Verwijder entry"
+                >
+                  ×
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
