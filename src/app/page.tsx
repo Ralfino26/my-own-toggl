@@ -15,9 +15,14 @@ export default function Home() {
           particleColor="#FFFFFF"
         />
       </div>
-      <main className="relative z-10 container mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="relative z-10 container mx-auto px-4 py-8 sm:px-6 lg:px-8 min-h-[calc(100vh-80px)]">
         <ProjectList />
       </main>
+      <footer className="relative z-10 w-full py-6 text-center">
+        <p className="text-white/40 text-sm backdrop-blur-sm">
+          Ralf is geweldig
+        </p>
+      </footer>
     </div>
   );
 }

@@ -223,7 +223,7 @@ export default function ProjectList() {
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-10 gap-4">
         <h1 className="text-4xl sm:text-5xl font-bold text-white">
-          Projecten
+          The Agency Uren
         </h1>
         <div className="flex gap-3 w-full sm:w-auto">
           {projects.length > 0 && (
