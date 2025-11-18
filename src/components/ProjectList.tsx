@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Project, TimeEntry } from '@/types';
 import { api } from '@/lib/api';
 import Link from 'next/link';
+import { jsPDF } from 'jspdf';
 
 export default function ProjectList() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -66,6 +67,144 @@ export default function ProjectList() {
       .reduce((sum, entry) => sum + entry.hours, 0);
   };
 
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nl-NL', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const handleExport = () => {
+    try {
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      let yPos = margin;
+      const lineHeight = 7;
+      const sectionSpacing = 10;
+
+      // Titel
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Tijdregistratie Overzicht', pageWidth / 2, yPos, { align: 'center' });
+      yPos += lineHeight * 1.5;
+
+      // Datum
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      const exportDate = new Date().toLocaleDateString('nl-NL', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      });
+      doc.text(`Gegenereerd op: ${exportDate}`, pageWidth / 2, yPos, { align: 'center' });
+      yPos += sectionSpacing * 2;
+
+      // Totaal overzicht
+      const totalHours = timeEntries.reduce((sum, entry) => sum + entry.hours, 0);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Totaal Overzicht', margin, yPos);
+      yPos += lineHeight * 1.5;
+
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Totaal projecten: ${projects.length}`, margin, yPos);
+      yPos += lineHeight;
+      doc.text(`Totaal registraties: ${timeEntries.length}`, margin, yPos);
+      yPos += lineHeight;
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Totaal uren: ${totalHours.toFixed(2)} uur`, margin, yPos);
+      yPos += sectionSpacing * 2;
+
+      // Per project
+      projects.forEach((project, index) => {
+        const projectEntries = timeEntries.filter(entry => entry.projectId === project.id);
+        const projectHours = getTotalHours(project.id);
+
+        // Check of we een nieuwe pagina nodig hebben
+        if (yPos > pageHeight - 60) {
+          doc.addPage();
+          yPos = margin;
+        }
+
+        // Project header
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${index + 1}. ${project.name}`, margin, yPos);
+        yPos += lineHeight;
+
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Totaal: ${projectHours.toFixed(2)} uur (${projectEntries.length} registraties)`, margin + 5, yPos);
+        yPos += lineHeight * 1.5;
+
+        // Time entries tabel
+        if (projectEntries.length > 0) {
+          // Tabel header
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'bold');
+          const col1 = margin + 5;
+          const col2 = col1 + 60;
+          const col3 = col2 + 50;
+          const col4 = col3 + 40;
+
+          doc.text('Datum', col1, yPos);
+          doc.text('Uren', col2, yPos);
+          doc.text('Beschrijving', col3, yPos);
+          yPos += lineHeight;
+
+          // Tabel data
+          doc.setFont('helvetica', 'normal');
+          const sortedEntries = [...projectEntries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+          
+          sortedEntries.forEach((entry) => {
+            if (yPos > pageHeight - 30) {
+              doc.addPage();
+              yPos = margin;
+            }
+
+            const entryDate = formatDate(entry.date);
+            doc.text(entryDate, col1, yPos);
+            doc.text(`${entry.hours.toFixed(2)}`, col2, yPos);
+            const description = entry.description || '-';
+            // Truncate description if too long
+            const maxDescWidth = pageWidth - col3 - margin;
+            const truncatedDesc = doc.splitTextToSize(description, maxDescWidth);
+            doc.text(truncatedDesc, col3, yPos);
+            yPos += lineHeight * Math.max(1, truncatedDesc.length);
+          });
+        } else {
+          doc.setFontSize(9);
+          doc.setFont('helvetica', 'italic');
+          doc.text('Geen registraties', margin + 5, yPos);
+          yPos += lineHeight;
+        }
+
+        yPos += sectionSpacing;
+      });
+
+      // Footer op laatste pagina
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Pagina ${i} van ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+      }
+
+      // Download
+      const fileName = `tijdregistratie-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+      alert('Fout bij het exporteren van PDF');
+    }
+  };
+
   // Array van kleuren voor de kaarten - pas deze aan naar jouw voorkeur!
   const cardColors = [
     { bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.3)', glow: 'rgba(99, 102, 241, 0.5)', name: 'Indigo' },
@@ -86,12 +225,23 @@ export default function ProjectList() {
         <h1 className="text-4xl sm:text-5xl font-bold text-white">
           Projecten
         </h1>
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="ios-button px-6 py-3 text-base font-semibold w-full sm:w-auto"
-        >
-          {showAddForm ? 'Annuleren' : '+ Nieuw Project'}
-        </button>
+        <div className="flex gap-3 w-full sm:w-auto">
+          {projects.length > 0 && (
+            <button
+              onClick={handleExport}
+              className="px-6 py-3 text-base font-semibold rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all backdrop-blur-sm"
+              title="Exporteer alle data"
+            >
+              📥 Export
+            </button>
+          )}
+          <button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="ios-button px-6 py-3 text-base font-semibold w-full sm:w-auto"
+          >
+            {showAddForm ? 'Annuleren' : '+ Nieuw Project'}
+          </button>
+        </div>
       </div>
 
       {showAddForm && (
