@@ -47,3 +47,23 @@ bun dev
 2. Maak een gratis cluster aan
 3. Kopieer je connection string naar `.env.local` als `MONGODB_URI`
 4. De database wordt automatisch aangemaakt bij eerste gebruik
+
+## Vercel Deployment
+
+Voor deployment op Vercel:
+
+1. **Environment Variables instellen in Vercel:**
+   - Ga naar je project settings → Environment Variables
+   - Voeg toe:
+     - `MONGODB_URI`: Je MongoDB connection string
+     - `AUTH_SECRET`: Genereer met `openssl rand -base64 32`
+     - `NEXTAUTH_URL`: Je production URL (bijv. `https://toggl.byralf.com`)
+
+2. **MongoDB Atlas IP Whitelist:**
+   - Ga naar MongoDB Atlas → Network Access
+   - Voeg `0.0.0.0/0` toe om alle IPs toe te staan (voor Vercel serverless functions)
+   - Of voeg specifieke Vercel IP ranges toe (check Vercel docs voor actuele IPs)
+
+3. **Deploy:**
+   - Push naar GitHub
+   - Vercel detecteert automatisch Next.js en deployt

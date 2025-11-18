@@ -24,13 +24,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let client;
+    let client: Awaited<typeof clientPromise>;
     try {
-      client = await clientPromise;
+      // Add timeout for connection
+      client = await Promise.race([
+        clientPromise,
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Connection timeout')), 10000)
+        )
+      ]);
     } catch (connectionError) {
       console.error('MongoDB connection error:', connectionError);
+      const errorMessage = connectionError instanceof Error ? connectionError.message : 'Unknown error';
+      
+      // More specific error messages
+      if (errorMessage.includes('timeout') || errorMessage.includes('ETIMEDOUT')) {
+        return NextResponse.json(
+          { error: 'Database verbinding timeout. Controleer je MongoDB Atlas IP whitelist en netwerk instellingen.' },
+          { status: 500 }
+        );
+      }
+      
+      if (errorMessage.includes('authentication') || errorMessage.includes('credentials')) {
+        return NextResponse.json(
+          { error: 'Database authenticatie mislukt. Controleer je MongoDB credentials.' },
+          { status: 500 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'Kan niet verbinden met database. Controleer je MongoDB instellingen.' },
+        { error: `Kan niet verbinden met database: ${errorMessage}. Controleer je MongoDB instellingen.` },
         { status: 500 }
       );
     }
