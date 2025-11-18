@@ -40,23 +40,23 @@ export default function TimeEntryForm({ projectId, onEntryAdded }: TimeEntryForm
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-      <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Nieuwe uren toevoegen</h3>
+    <form onSubmit={handleSubmit} className="mb-8 glass-card p-6 rounded-2xl">
+      <h3 className="text-xl font-semibold mb-6 text-gray-900 dark:text-white">Nieuwe uren toevoegen</h3>
       <div className="grid gap-4 md:grid-cols-3">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Datum
           </label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="ios-input w-full px-5 py-3.5 text-base"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Uren
           </label>
           <input
@@ -66,12 +66,12 @@ export default function TimeEntryForm({ projectId, onEntryAdded }: TimeEntryForm
             value={hours}
             onChange={(e) => setHours(e.target.value)}
             placeholder="0.0"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="ios-input w-full px-5 py-3.5 text-base"
             required
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">
             Beschrijving (optioneel)
           </label>
           <input
@@ -79,14 +79,14 @@ export default function TimeEntryForm({ projectId, onEntryAdded }: TimeEntryForm
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Wat heb je gedaan?"
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+            className="ios-input w-full px-5 py-3.5 text-base"
           />
         </div>
       </div>
       <button
         type="submit"
         disabled={submitting}
-        className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+        className="ios-button mt-6 px-8 py-3.5 text-base font-semibold w-full md:w-auto disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:transform-none"
       >
         {submitting ? 'Toevoegen...' : 'Toevoegen'}
       </button>
