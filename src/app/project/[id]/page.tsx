@@ -15,8 +15,23 @@ export default function ProjectPage() {
   const projectId = params.id as string;
 
   const [project, setProject] = useState<Project | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Array van kleuren voor de kaarten - zelfde als homepage
+  const cardColors = [
+    { bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.3)', glow: 'rgba(99, 102, 241, 0.5)', name: 'Indigo' },
+    { bg: 'rgba(236, 72, 153, 0.15)', border: 'rgba(236, 72, 153, 0.3)', glow: 'rgba(236, 72, 153, 0.5)', name: 'Pink' },
+    { bg: 'rgba(34, 197, 94, 0.15)', border: 'rgba(34, 197, 94, 0.3)', glow: 'rgba(34, 197, 94, 0.5)', name: 'Green' },
+    { bg: 'rgba(251, 146, 60, 0.15)', border: 'rgba(251, 146, 60, 0.3)', glow: 'rgba(251, 146, 60, 0.5)', name: 'Orange' },
+    { bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.3)', glow: 'rgba(168, 85, 247, 0.5)', name: 'Purple' },
+    { bg: 'rgba(59, 130, 246, 0.15)', border: 'rgba(59, 130, 246, 0.3)', glow: 'rgba(59, 130, 246, 0.5)', name: 'Blue' },
+  ];
+
+  const getCardColor = (index: number) => {
+    return cardColors[index % cardColors.length];
+  };
 
   useEffect(() => {
     loadData();
@@ -25,18 +40,19 @@ export default function ProjectPage() {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [projects, entriesData] = await Promise.all([
+      const [projectsData, entriesData] = await Promise.all([
         api.getProjects(),
         api.getTimeEntries(projectId),
       ]);
       
-      const foundProject = projects.find(p => p.id === projectId);
+      const foundProject = projectsData.find(p => p.id === projectId);
       
       if (!foundProject) {
         router.push('/');
         return;
       }
 
+      setProjects(projectsData);
       setProject(foundProject);
       setEntries(entriesData);
     } catch (error) {
@@ -48,6 +64,10 @@ export default function ProjectPage() {
   };
 
   const totalHours = entries.reduce((sum, entry) => sum + entry.hours, 0);
+  
+  // Bepaal de kleur op basis van de index van het project in de lijst
+  const projectIndex = projects.findIndex(p => p.id === projectId);
+  const cardColor = projectIndex >= 0 ? getCardColor(projectIndex) : null;
 
   if (loading || !project) {
     return (
@@ -93,8 +113,22 @@ export default function ProjectPage() {
             <span className="mr-2 group-hover:-translate-x-1 transition-transform">←</span>
             Terug naar projecten
           </Link>
-          <div className="p-6 rounded-2xl mb-6 backdrop-blur-xl bg-white/10 border border-white/20">
-            <div className="flex items-center justify-between flex-wrap gap-4">
+          <div 
+            className="relative p-6 rounded-2xl mb-6 overflow-hidden"
+            style={cardColor ? {
+              background: cardColor.bg,
+              border: `1px solid ${cardColor.border}`,
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 20px ${cardColor.glow}`,
+            } : {
+              backdropFilter: 'blur(20px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+            }}
+          >
+            <div className="relative z-10 flex items-center justify-between flex-wrap gap-4">
               <div>
                 <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2">
                   {project.name}
@@ -104,7 +138,7 @@ export default function ProjectPage() {
                     Totaal:
                   </p>
                   <p className="text-2xl font-bold text-white">
-                    {totalHours.toFixed(2)}h
+                    {totalHours.toFixed(2)} uur
                   </p>
                 </div>
               </div>
