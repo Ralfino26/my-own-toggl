@@ -6,12 +6,6 @@ import { api } from '@/lib/api';
 import Link from 'next/link';
 import { jsPDF } from 'jspdf';
 import { signOut, useSession } from 'next-auth/react';
-import dynamic from 'next/dynamic';
-
-const ProjectPieChart = dynamic(() => import('./ProjectPieChart'), {
-  ssr: false,
-  loading: () => <div className="w-[300px] h-[300px] flex items-center justify-center text-white/70">Laden...</div>
-});
 
 export default function ProjectList() {
   const { data: session } = useSession();
@@ -227,58 +221,6 @@ export default function ProjectList() {
     return cardColors[index % cardColors.length];
   };
 
-  // Calculate pie chart data for Recharts
-  const getPieChartData = () => {
-    if (projects.length === 0) return null;
-
-    const projectData = projects.map((project, index) => {
-      const hours = getTotalHours(project.id);
-      return {
-        name: project.name,
-        value: hours,
-        displayValue: hours, // Keep original value for display
-        projectId: project.id,
-        color: getCardColor(index).border,
-        glow: getCardColor(index).glow,
-      };
-    });
-
-    const totalHours = projectData.reduce((sum, item) => sum + item.value, 0);
-    
-    // If all projects have 0 hours, use a small value for visualization but keep display as 0
-    const hasAnyHours = totalHours > 0;
-    const minValueForChart = 0.01; // Minimum value to show in pie chart
-
-    // Add percentage to each item and totalHours for tooltip
-    const dataWithPercentage = projectData.map(item => {
-      // Use minimum value for chart if hours is 0, but keep original for display
-      const chartValue = item.value > 0 ? item.value : minValueForChart;
-      const effectiveTotal = hasAnyHours ? totalHours : (projectData.length * minValueForChart);
-      const percentage = hasAnyHours 
-        ? ((item.value / totalHours) * 100).toFixed(1)
-        : ((1 / projectData.length) * 100).toFixed(1); // Equal distribution if all 0
-      
-      return {
-        ...item,
-        value: chartValue, // Use chart value for rendering
-        displayValue: item.displayValue, // Keep original for display
-        percentage,
-        totalHours: totalHours || 0, // Use 0 if no hours yet
-      };
-    });
-
-    return { data: dataWithPercentage, totalHours };
-  };
-
-  const pieChartData = getPieChartData();
-
-  // Debug: log pie chart data
-  useEffect(() => {
-    if (pieChartData) {
-      console.log('Pie chart data:', pieChartData);
-    }
-  }, [pieChartData]);
-
   return (
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-10 gap-4">
@@ -352,80 +294,63 @@ export default function ProjectList() {
           <p className="text-xl font-semibold mb-2 text-white">Nog geen projecten</p>
           <p className="text-white/70">Maak je eerste project aan om te beginnen!</p>
         </div>
-      ) : null}
-
-      {!loading && pieChartData && (
-        <div className="p-8 rounded-3xl backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-3xl font-bold text-white mb-2">Uren verdeling</h2>
-              <p className="text-white/60 text-sm">
-                Totaal: <span className="font-semibold text-white">{pieChartData.totalHours.toFixed(2)} uur</span>
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col xl:flex-row items-start gap-10">
-            <div className="flex-shrink-0 w-full xl:w-auto flex justify-center xl:justify-start">
-              <ProjectPieChart data={pieChartData.data} />
-            </div>
-            <div className="flex-1 w-full">
-              <h3 className="text-lg font-semibold text-white/90 mb-4">Project overzicht</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {pieChartData.data
-                  .sort((a, b) => b.value - a.value) // Sort by hours descending
-                  .map((item, index) => (
-                    <div
-                      key={`legend-${index}`}
-                      className="group flex items-center gap-4 p-4 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 transition-all duration-300"
-                      style={{
-                        boxShadow: `0 0 0 0 ${item.glow}`,
+      ) : (
+        <div className="grid gap-5 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {projects.map((project, index) => {
+            const color = getCardColor(index);
+            return (
+              <div
+                key={project.id}
+                className="relative p-6 rounded-2xl hover:scale-[1.02] transition-all duration-300 cursor-pointer group overflow-hidden"
+                style={{
+                  background: color.bg,
+                  border: `1px solid ${color.border}`,
+                  backdropFilter: 'blur(20px) saturate(180%)',
+                  WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+                  boxShadow: `0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06), 0 0 20px ${color.glow}`,
+                }}
+              >
+                {/* Glowing effect */}
+                <div
+                  className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl"
+                  style={{
+                    background: `radial-gradient(circle at center, ${color.glow} 0%, transparent 70%)`,
+                    filter: 'blur(20px)',
+                  }}
+                />
+                
+                <div className="relative z-10">
+                  <div className="flex items-start justify-between mb-5">
+                    <h2 className="text-xl font-semibold text-white group-hover:text-white transition-colors pr-2">
+                      {project.name}
+                    </h2>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteProject(project.id);
                       }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.boxShadow = `0 0 20px ${item.glow}`;
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.boxShadow = '0 0 0 0 transparent';
-                      }}
+                      className="text-red-400 hover:text-red-300 text-2xl font-light opacity-60 hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20"
+                      title="Verwijder project"
                     >
-                      <div
-                        className="w-5 h-5 rounded-full flex-shrink-0 transition-transform group-hover:scale-110"
-                        style={{
-                          backgroundColor: item.color,
-                          boxShadow: `0 0 12px ${item.glow}`,
-                        }}
-                      />
-                      <Link
-                        href={`/project/${item.projectId}`}
-                        className="flex-1 min-w-0 cursor-pointer"
-                      >
-                        <p className="text-white font-semibold truncate mb-1">{item.name}</p>
-                        <div className="flex items-baseline gap-2">
-                          <p className="text-white/90 font-bold text-lg">
-                            {item.displayValue?.toFixed(2) || item.value.toFixed(2)}
-                          </p>
-                          <p className="text-white/60 text-sm">uur</p>
-                          <span className="text-white/50">•</span>
-                          <p className="text-white/70 text-sm font-medium">
-                            {item.percentage}%
-                          </p>
-                        </div>
-                      </Link>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                          handleDeleteProject(item.projectId);
-                        }}
-                        className="text-red-400 hover:text-red-300 text-xl font-light opacity-60 hover:opacity-100 transition-opacity w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20 flex-shrink-0"
-                        title="Verwijder project"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+                      ×
+                    </button>
+                  </div>
+                  <div className="mb-6">
+                    <p className="text-3xl font-bold text-white mb-1">
+                      {getTotalHours(project.id).toFixed(2)} uur
+                    </p>
+                    <p className="text-sm text-white/70 font-medium">Totaal uren</p>
+                  </div>
+                  <Link
+                    href={`/project/${project.id}`}
+                    className="block w-full text-center px-4 py-3 bg-white/20 hover:bg-white/30 text-white rounded-xl transition-all font-semibold backdrop-blur-sm border border-white/20"
+                  >
+                    Open Project
+                  </Link>
+                </div>
               </div>
-            </div>
-          </div>
+            );
+          })}
         </div>
       )}
     </div>
