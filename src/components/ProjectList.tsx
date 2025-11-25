@@ -337,7 +337,7 @@ export default function ProjectList() {
                   </div>
                   <div className="mb-6">
                     <p className="text-3xl font-bold text-white mb-1">
-                      {getTotalHours(project.id).toFixed(1)} uur
+                      {getTotalHours(project.id).toFixed(2)} uur
                     </p>
                     <p className="text-sm text-white/70 font-medium">Totaal uren</p>
                   </div>

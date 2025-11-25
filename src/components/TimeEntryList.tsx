@@ -60,7 +60,7 @@ export default function TimeEntryList({ entries, onEntryDeleted }: TimeEntryList
             >
               <td className="py-3 px-4">
                 <span className="text-sm font-semibold text-white/90">
-                  {entry.hours.toFixed(1)} uur
+                  {entry.hours.toFixed(2)} uur
                 </span>
               </td>
               <td className="py-3 px-4">
